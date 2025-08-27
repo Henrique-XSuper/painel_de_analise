@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard de KPIs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+
+    .metric-card { transition: all 0.3s ease; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    .metric-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+
+    .chart-bar { transition: all 0.8s ease; transform-origin: bottom; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .pulse-animation { animation: pulse 2s infinite; }
+
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-up { animation: slideUp 0.6s ease-out; }
+
+    .chart-container { position: relative; height: 300px; }
+
+    .notification { transition: all 0.3s ease; }
+    .notification.show { transform: translateX(0); opacity: 1; }
+    .notification.hide { transform: translateX(100%); opacity: 0; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+  <!-- Header -->
+  <header class="bg-black/20 backdrop-blur-lg border-b border-white/10">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <span class="text-white font-bold text-lg">📊</span>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-white">Dashboard Analytics</h1>
+            <p class="text-gray-300 text-sm">Monitoramento em Tempo Real</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-right">
+            <div class="text-white font-medium" id="currentTime"></div>
+            <div class="text-gray-300 text-sm" id="currentDate"></div>
+          </div>
+          <div class="w-8 h-8 bg-green-500 rounded-full pulse-animation"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container mx-auto px-6 py-8">
+    <!-- Controls -->
+    <div class="mb-8 bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+          <button onclick="refreshData()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105">🔄 Atualizar Dados</button>
+          <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105">⏱️ Auto Refresh: ON</button>
+        </div>
+        <div class="flex items-center space-x-4">
+          <select id="periodSelect" onchange="changePeriod()" class="bg-white/10 text-white border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="today">Hoje</option>
+            <option value="week">Esta Semana</option>
+            <option value="month" selected>Este Mês</option>
+            <option value="year">Este Ano</option>
+          </select>
+          <div class="text-white text-sm">Última atualização: <span id="lastUpdate" class="font-medium"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <!-- Receita Total -->
+      <div class="metric-card rounded-2xl p-6 slide-up">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-green-600 rounded-xl flex items-center justify-center">
+            <span class="text-white text-xl">💰</span>
+          </div>
+          <div class="text-right">
+            <div class="text-green-400 text-sm font-medium">+12.5%</div>
+            <div class="text-gray-400 text-xs">vs mês anterior</div>
+          </div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-1" id="revenue">R$ 0</div>
+          <div class="text-gray-300 text-sm">Receita Total</div>
+        </div>
+      </div>
+      <!-- Vendas -->
+      <div class="metric-card rounded-2xl p-6 slide-up" style="animation-delay: 0.1s">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
+            <span class="text-white text-xl">🛒</span>
+          </div>
+          <div class="text-right">
+            <div class="text-blue-400 text-sm font-medium">+8.2%</div>
+            <div class="text-gray-400 text-xs">vs mês anterior</div>
+          </div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-1" id="sales">0</div>
+          <div class="text-gray-300 text-sm">Vendas Realizadas</div>
+        </div>
+      </div>
+      <!-- Usuários Ativos -->
+      <div class="metric-card rounded-2xl p-6 slide-up" style="animation-delay: 0.2s">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+            <span class="text-white text-xl">👥</span>
+          </div>
+          <div class="text-right">
+            <div class="text-purple-400 text-sm font-medium">+15.7%</div>
+            <div class="text-gray-400 text-xs">vs mês anterior</div>
+          </div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-1" id="users">0</div>
+          <div class="text-gray-300 text-sm">Usuários Ativos</div>
+        </div>
+      </div>
+      <!-- Taxa de Conversão -->
+      <div class="metric-card rounded-2xl p-6 slide-up" style="animation-delay: 0.3s">
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 bg-gradient-to-r from-orange-400 to-orange-600 rounded-xl flex items-center justify-center">
+            <span class="text-white text-xl">📈</span>
+          </div>
+          <div class="text-right">
+            <div class="text-orange-400 text-sm font-medium">+2.1%</div>
+            <div class="text-gray-400 text-xs">vs mês anterior</div>
+          </div>
+        </div>
+        <div class="text-white">
+          <div class="text-3xl font-bold mb-1" id="conversion">0%</div>
+          <div class="text-gray-300 text-sm">Taxa de Conversão</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <!-- Vendas por Dia -->
+      <div class="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+        <h3 class="text-xl font-semibold text-white mb-6">📊 Vendas dos Últimos 7 Dias</h3>
+        <div class="chart-container">
+          <div id="salesChart" class="h-full flex items-end justify-between space-x-2"></div>
+        </div>
+      </div>
+      <!-- Metas do Mês -->
+      <div class="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+        <h3 class="text-xl font-semibold text-white mb-6">🎯 Progresso das Metas</h3>
+        <div class="space-y-6">
+          <div>
+            <div class="flex justify-between text-white mb-2"><span>Receita Mensal</span><span id="revenueGoalText">R$ 0 / R$ 500.000</span></div>
+            <div class="w-full bg-gray-700 rounded-full h-3">
+              <div id="revenueProgress" class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-white mb-2"><span>Vendas Mensais</span><span id="salesGoalText">0 / 1000</span></div>
+            <div class="w-full bg-gray-700 rounded-full h-3">
+              <div id="salesProgress" class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-white mb-2"><span>Novos Usuários</span><span id="usersGoalText">0 / 5000</span></div>
+            <div class="w-full bg-gray-700 rounded-full h-3">
+              <div id="usersProgress" class="bg-gradient-to-r from-purple-400 to-purple-600 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Metrics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Top Produtos -->
+      <div class="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+        <h3 class="text-xl font-semibold text-white mb-6">🏆 Top Produtos</h3>
+        <div id="topProducts" class="space-y-4"></div>
+      </div>
+      <!-- Métricas de Tráfego -->
+      <div class="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+        <h3 class="text-xl font-semibold text-white mb-6">🌐 Tráfego do Site</h3>
+        <div class="space-y-4">
+          <div class="flex justify-between items-center"><span class="text-gray-300">Visitantes Únicos</span><span class="text-white font-bold" id="uniqueVisitors">0</span></div>
+          <div class="flex justify-between items-center"><span class="text-gray-300">Páginas Vistas</span><span class="text-white font-bold" id="pageViews">0</span></div>
+          <div class="flex justify-between items-center"><span class="text-gray-300">Taxa de Rejeição</span><span class="text-white font-bold" id="bounceRate">0%</span></div>
+          <div class="flex justify-between items-center"><span class="text-gray-300">Tempo Médio</span><span class="text-white font-bold" id="avgTime">0min</span></div>
+        </div>
+      </div>
+      <!-- Alertas e Notificações -->
+      <div class="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/10">
+        <h3 class="text-xl font-semibold text-white mb-6">🔔 Alertas</h3>
+        <div id="alerts" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notification" class="notification hide fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+    <div class="flex items-center space-x-2">
+      <span id="notificationIcon">✅</span>
+      <span id="notificationText">Dados atualizados com sucesso!</span>
+    </div>
+  </div>
+
+  <script>
+    let autoRefresh = true;
+    let refreshInterval;
+
+    // Dados iniciais
+    let dashboardData = {
+      revenue: 387500,
+      sales: 842,
+      users: 3247,
+      conversion: 3.8,
+      salesChart: [120, 135, 98, 156, 189, 167, 203],
+      goals: { revenue: 500000, sales: 1000, users: 5000 },
+      topProducts: [
+        { name: 'Produto Premium A', sales: 156, revenue: 23400 },
+        { name: 'Produto Standard B', sales: 134, revenue: 18760 },
+        { name: 'Produto Básico C', sales: 98, revenue: 12740 },
+        { name: 'Produto Premium D', sales: 87, revenue: 15660 },
+        { name: 'Produto Standard E', sales: 76, revenue: 9120 }
+      ],
+      traffic: { uniqueVisitors: 12847, pageViews: 34521, bounceRate: 32.4, avgTime: 4.2 }
+    };
+
+    // Utils
+    const fmtBR = n => n.toLocaleString('pt-BR');
+    const moneyBR = n => 'R$ ' + n.toLocaleString('pt-BR');
+
+    function updateDateTime() {
+      const now = new Date();
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString('pt-BR');
+      document.getElementById('currentDate').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function animateNumber(element, start, end, duration = 1000) {
+      const range = end - start;
+      const increment = range / (duration / 16);
+      let current = start;
+      const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) { current = end; clearInterval(timer); }
+        if (element.id === 'revenue') element.textContent = moneyBR(Math.floor(current));
+        else if (element.id === 'conversion') element.textContent = current.toFixed(1) + '%';
+        else element.textContent = Math.floor(current).toLocaleString('pt-BR');
+      }, 16);
+    }
+
+    function updateKPIs() {
+      animateNumber(document.getElementById('revenue'), 0, dashboardData.revenue);
+      animateNumber(document.getElementById('sales'), 0, dashboardData.sales);
+      animateNumber(document.getElementById('users'), 0, dashboardData.users);
+      animateNumber(document.getElementById('conversion'), 0, dashboardData.conversion);
+    }
+
+    function updateSalesChart() {
+      const chartContainer = document.getElementById('salesChart');
+      const maxValue = Math.max(...dashboardData.salesChart);
+      const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      chartContainer.innerHTML = dashboardData.salesChart.map((value, index) => {
+        const height = Math.max((value / maxValue) * 250, 20);
+        return `
+          <div class="flex flex-col items-center justify-end" style="width: 14%; height: 280px;">
+            <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg chart-bar relative group cursor-pointer hover:from-blue-400 hover:to-blue-300 transition-all duration-300" style="height: ${height}px; animation-delay: ${index * 0.1}s">
+              <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">${value} vendas</div>
+            </div>
+            <div class="text-white text-xs mt-2 font-medium">${value}</div>
+            <div class="text-gray-400 text-xs mt-1">${days[index]}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function updateGoals() {
+      const revenuePercent = (dashboardData.revenue / dashboardData.goals.revenue) * 100;
+      const salesPercent = (dashboardData.sales / dashboardData.goals.sales) * 100;
+      const usersPercent = (dashboardData.users / dashboardData.goals.users) * 100;
+      setTimeout(() => {
+        document.getElementById('revenueProgress').style.width = Math.min(revenuePercent, 100) + '%';
+        document.getElementById('salesProgress').style.width = Math.min(salesPercent, 100) + '%';
+        document.getElementById('usersProgress').style.width = Math.min(usersPercent, 100) + '%';
+      }, 200);
+      document.getElementById('revenueGoalText').textContent = `${moneyBR(dashboardData.revenue)} / ${moneyBR(dashboardData.goals.revenue)}`;
+      document.getElementById('salesGoalText').textContent = `${fmtBR(dashboardData.sales)} / ${fmtBR(dashboardData.goals.sales)}`;
+      document.getElementById('usersGoalText').textContent = `${fmtBR(dashboardData.users)} / ${fmtBR(dashboardData.goals.users)}`;
+    }
+
+    function updateTopProducts() {
+      const wrap = document.getElementById('topProducts');
+      const maxSales = Math.max(...dashboardData.topProducts.map(p => p.sales));
+      wrap.innerHTML = dashboardData.topProducts.map(p => `
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-white font-medium">${p.name}</span>
+            <span class="text-gray-300 text-sm">${fmtBR(p.sales)} vendas</span>
+          </div>
+          <div class="w-full bg-gray-700 rounded-full h-2">
+            <div class="h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-500" style="width:${(p.sales / maxSales) * 100}%"></div>
+          </div>
+          <div class="text-gray-400 text-xs mt-2">Receita: ${moneyBR(p.revenue)}</div>
+        </div>`).join('');
+    }
+
+    function updateTraffic() {
+      // Simula pequenas variações a cada refresh
+      const t = dashboardData.traffic;
+      const jitter = (v, p=0.05) => Math.max(0, Math.round(v * (1 + (Math.random() - 0.5) * 2 * p)));
+      t.uniqueVisitors = jitter(t.uniqueVisitors);
+      t.pageViews = jitter(t.pageViews);
+      t.bounceRate = Math.min(95, Math.max(5, +(t.bounceRate + (Math.random()-0.5)*2).toFixed(1)));
+      t.avgTime = Math.min(15, Math.max(0.3, +(t.avgTime + (Math.random()-0.5)*0.3).toFixed(1)));
+
+      document.getElementById('uniqueVisitors').textContent = fmtBR(t.uniqueVisitors);
+      document.getElementById('pageViews').textContent = fmtBR(t.pageViews);
+      document.getElementById('bounceRate').textContent = t.bounceRate + '%';
+      document.getElementById('avgTime').textContent = t.avgTime + ' min';
+    }
+
+    function updateAlerts() {
+      const alerts = [
+        'Vendas abaixo da média em determinado produto.',
+        'Tráfego aumentou 20% na última hora.',
+        'Novo cliente VIP cadastrado.',
+        'Produto em falta no estoque.',
+        'Campanha de e-mail com CTR acima do esperado.'
+      ];
+      const pick = () => alerts[Math.floor(Math.random() * alerts.length)];
+      document.getElementById('alerts').innerHTML = `
+        <div class="p-3 bg-yellow-500/10 text-yellow-200 rounded-lg border border-yellow-500/30">⚠️ ${pick()}</div>
+        <div class="p-3 bg-blue-500/10 text-blue-200 rounded-lg border border-blue-500/30">ℹ️ ${pick()}</div>`;
+    }
+
+    function notify(message, type='success') {
+      const el = document.getElementById('notification');
+      const text = document.getElementById('notificationText');
+      const icon = document.getElementById('notificationIcon');
+      text.textContent = message;
+      el.classList.remove('bg-green-500','bg-red-500');
+      if (type === 'error') { el.classList.add('bg-red-500'); icon.textContent = '❌'; }
+      else { el.classList.add('bg-green-500'); icon.textContent = '✅'; }
+      el.classList.remove('hide'); el.classList.add('show');
+      setTimeout(() => { el.classList.remove('show'); el.classList.add('hide'); }, 2500);
+    }
+
+    function refreshData() {
+      // Atualiza relógio e carimbo
+      updateDateTime();
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('pt-BR');
+
+      // Atualizações visuais
+      updateKPIs();
+      updateSalesChart();
+      updateGoals();
+      updateTopProducts();
+      updateTraffic();
+      updateAlerts();
+      notify('Dados atualizados com sucesso!', 'success');
+    }
+
+    function toggleAutoRefresh() {
+      autoRefresh = !autoRefresh;
+      const btn = document.getElementById('autoRefreshBtn');
+      btn.textContent = `⏱️ Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+      if (autoRefresh) {
+        refreshInterval = setInterval(refreshData, 5000);
+        notify('Auto refresh ativado');
+      } else {
+        clearInterval(refreshInterval);
+        notify('Auto refresh desativado');
+      }
+    }
+
+    function changePeriod() {
+      const p = document.getElementById('periodSelect').value;
+      // Gera números diferentes por período (simulação)
+      const rnd = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const rndF = (min, max, d=1) => +(Math.random() * (max - min) + min).toFixed(d);
+      if (p === 'today') {
+        dashboardData.revenue = rnd(20000, 90000);
+        dashboardData.sales = rnd(80, 320);
+        dashboardData.users = rnd(600, 1800);
+        dashboardData.conversion = rndF(1.8, 5.5, 1);
+      } else if (p === 'week') {
+        dashboardData.revenue = rnd(120000, 380000);
+        dashboardData.sales = rnd(400, 1100);
+        dashboardData.users = rnd(2000, 6000);
+        dashboardData.conversion = rndF(2.2, 5.8, 1);
+      } else if (p === 'month') {
+        dashboardData.revenue = rnd(300000, 700000);
+        dashboardData.sales = rnd(700, 1500);
+        dashboardData.users = rnd(3000, 8000);
+        dashboardData.conversion = rndF(2.5, 6.2, 1);
+      } else { // year
+        dashboardData.revenue = rnd(2500000, 5200000);
+        dashboardData.sales = rnd(10000, 24000);
+        dashboardData.users = rnd(40000, 120000);
+        dashboardData.conversion = rndF(2.0, 6.5, 1);
+      }
+      // Recria série de 7 dias
+      dashboardData.salesChart = Array.from({ length: 7 }, () => rnd(60, 240));
+      refreshData();
+    }
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', () => {
+      updateDateTime();
+      refreshData();
+      refreshInterval = setInterval(refreshData, 5000);
+      setInterval(updateDateTime, 1000);
+    });
+  </script>
+</body>
+</html>
