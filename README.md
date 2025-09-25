@@ -48,7 +48,7 @@ dashboard-kpi/<br>
 
 Clone ou baixe este repositório:
 
-git clone https://github.com/Henrique-XSuper/dashboard-kpi.git
+git clone https://github.com/Henrique-XSuper/painel_de_analise.git
 
 
 Abra o index.html em qualquer navegador moderno (Chrome, Firefox, Edge).
